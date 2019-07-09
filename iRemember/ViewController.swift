@@ -26,7 +26,7 @@ class ViewController: UIViewController, VNDocumentCameraViewControllerDelegate {
 
         title = "iRemember"
 
-        collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: createBasicLayout())
+        collectionView = UICollectionView(frame: view.bounds, collectionViewLayout: createCompositionalLayout())
         collectionView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         collectionView.backgroundColor = .systemBackground
         collectionView.register(ImageCell.self, forCellWithReuseIdentifier: ImageCell.reuseIdentifier)
@@ -144,5 +144,22 @@ class ViewController: UIViewController, VNDocumentCameraViewControllerDelegate {
         documents.append(document)
 
         print("Document: \(document)")
+    }
+    
+    func createCompositionalLayout() -> UICollectionViewLayout {
+        let squareSize: CGFloat = 0.5
+        let itemSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(squareSize), heightDimension: .fractionalHeight(1))
+
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        let spacing: CGFloat = 5
+
+        item.contentInsets = NSDirectionalEdgeInsets(top: spacing, leading: spacing, bottom: spacing, trailing: spacing)
+
+        let groupSize = NSCollectionLayoutSize(widthDimension: .fractionalWidth(1), heightDimension: .fractionalWidth(0.5))
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+
+        let section = NSCollectionLayoutSection(group: group)
+        
+        return UICollectionViewCompositionalLayout(section: section)
     }
 }

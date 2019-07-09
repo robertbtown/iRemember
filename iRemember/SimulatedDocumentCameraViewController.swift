@@ -12,7 +12,7 @@ import UIKit
 final class VNDocumentCameraViewController: UIViewController {
     weak var delegate: VNDocumentCameraViewControllerDelegate?
     
-    let scannedImage = UIImage(named: "ScannedPage")!
+    let scannedImage = UIImage(named: "ScannedPage4")!
     
     override func loadView() {
         view = UIView()
