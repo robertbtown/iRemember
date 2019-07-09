@@ -7,8 +7,11 @@
 //
 
 import UIKit
+import VisionKit
+import Vision
+import NaturalLanguage
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, VNDocumentCameraViewControllerDelegate {
     enum Section {
         case main
     }
@@ -77,10 +80,69 @@ class ViewController: UIViewController {
     }
 
     @objc func scanDocument() {
-
+        let vc = VNDocumentCameraViewController()
+        vc.delegate = self
+        present(vc, animated: true)
     }
 
     @objc func changeLayout() {
         collectionView.setCollectionViewLayout(createBasicLayout(), animated: true)
+    }
+
+    func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+        dismiss(animated: true)
+    }
+
+    func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFailWithError error: Error) {
+        dismiss(animated: true)
+    }
+
+    func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFinishWith scan: VNDocumentCameraScan) {
+        dismiss(animated: true)
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            let request = VNRecognizeTextRequest()
+            let requests = [request]
+
+            for i in 0 ..< scan.pageCount {
+                let pageImage = scan.imageOfPage(at: i)
+                guard let imageData = pageImage.pngData() else { continue }
+
+                let handler = VNImageRequestHandler(data: imageData)
+                try? handler.perform(requests)
+
+                guard let observations = request.results as? [VNRecognizedTextObservation] else {
+                    fatalError()
+                }
+
+                self.parse(observations, for: imageData)
+            }
+
+            if scan.pageCount > 0 {
+                DispatchQueue.main.async {
+                    self.saveData()
+                    self.reloadData(animated: true)
+                }
+            }
+        }
+    }
+    
+    func parse(_ observations: [VNRecognizedTextObservation], for imageData: Data) {
+        var pageText = ""
+
+        for observation in observations {
+            guard let bestCandidate = observation.topCandidates(1).first else { continue }
+            pageText += "\(bestCandidate.string) "
+        }
+
+        let tagger = NLTagger(tagSchemes: [.sentimentScore])
+        tagger.string = pageText
+        let  (sentiment, _) = tagger.tag(at: pageText.startIndex, unit: .paragraph, scheme: .sentimentScore)
+
+        let document = ScannedDocument(text: pageText, sentiment: sentiment)
+        try? imageData.write(to: document.url)
+        documents.append(document)
+
+        print("Document: \(document)")
     }
 }
